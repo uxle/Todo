@@ -1,0 +1,6 @@
+{
+  "name": "Tasks",
+  "description": "A clean and modern task manager.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
