@@ -1,22 +1,37 @@
 package com.example.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.AppDatabase
 import com.example.data.Task
 import com.example.data.TaskRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
-import java.util.regex.Pattern
 
 class TasksViewModel(application: Application) : AndroidViewModel(application) {
     private val repository: TaskRepository
-
     val uiState: StateFlow<List<Task>>
+
+    // RPG System
+    private val prefs = application.getSharedPreferences("rpg_stats", Context.MODE_PRIVATE)
+    
+    private val _xp = MutableStateFlow(prefs.getInt("xp", 0))
+    val xp: StateFlow<Int> = _xp
+    
+    private val _level = MutableStateFlow(calculateLevel(_xp.value))
+    val level: StateFlow<Int> = _level
+    
+    private val _rankTitle = MutableStateFlow(calculateRankTitle(_level.value))
+    val rankTitle: StateFlow<String> = _rankTitle
+    
+    private val _streak = MutableStateFlow(prefs.getInt("streak", 0))
+    val streak: StateFlow<Int> = _streak
 
     init {
         val taskDao = AppDatabase.getDatabase(application).taskDao()
@@ -30,42 +45,13 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
             )
     }
 
-    private val dateTodayPattern = Pattern.compile("\\b(today)\\b", Pattern.CASE_INSENSITIVE)
-    private val dateTomorrowPattern = Pattern.compile("\\b(tomorrow|tmrw)\\b", Pattern.CASE_INSENSITIVE)
-    private val dateNextWeekPattern = Pattern.compile("\\b(next week)\\b", Pattern.CASE_INSENSITIVE)
-    private val priorityHighPattern = Pattern.compile("\\b(!high|!important|!urgent)\\b", Pattern.CASE_INSENSITIVE)
-
     fun addTask(rawText: String) {
         val trimmed = rawText.trim()
         if (trimmed.isEmpty()) return
 
-        var cleanText = trimmed
-        var date: String? = null
-        var flagged = false
-
-        if (priorityHighPattern.matcher(cleanText).find()) {
-            flagged = true
-            cleanText = cleanText.replace(priorityHighPattern.toRegex(), "")
-        }
-
-        val today = java.time.LocalDate.now()
-        
-        if (dateTodayPattern.matcher(cleanText).find()) {
-            date = today.toString()
-            cleanText = cleanText.replace(dateTodayPattern.toRegex(), "")
-        } else if (dateTomorrowPattern.matcher(cleanText).find()) {
-            date = today.plusDays(1).toString()
-            cleanText = cleanText.replace(dateTomorrowPattern.toRegex(), "")
-        } else if (dateNextWeekPattern.matcher(cleanText).find()) {
-            date = today.plusDays(7).toString()
-            cleanText = cleanText.replace(dateNextWeekPattern.toRegex(), "")
-        }
-
         val task = Task(
             id = UUID.randomUUID().toString(),
-            text = cleanText.trim(),
-            date = date,
-            flagged = flagged
+            text = trimmed
         )
 
         viewModelScope.launch {
@@ -75,13 +61,59 @@ class TasksViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleTask(id: String, currentStatus: Boolean) {
         viewModelScope.launch {
-            repository.updateTaskStatus(id, !currentStatus)
+            val newStatus = !currentStatus
+            repository.updateTaskStatus(id, newStatus)
+            
+            if (newStatus) {
+                // Task completed! Award XP
+                awardXp(50)
+            } else {
+                // Task uncompleted (optional penalty, let's keep it simple and just deduct what was awarded previously or skip it to be generous)
+            }
         }
     }
 
     fun deleteTask(id: String) {
         viewModelScope.launch {
             repository.deleteTaskById(id)
+        }
+    }
+
+    private fun awardXp(amount: Int) {
+        val newXp = _xp.value + amount
+        _xp.value = newXp
+        prefs.edit().putInt("xp", newXp).apply()
+        
+        val newLevel = calculateLevel(newXp)
+        if (newLevel != _level.value) {
+            _level.value = newLevel
+            _rankTitle.value = calculateRankTitle(newLevel)
+        }
+    }
+    
+    // --- RPG Logic ---
+    private fun calculateLevel(currentXp: Int): Int {
+        // Level increases every 100 * Level XP (e.g., Level 1 -> Level 2 requires 100 XP, 2 -> 3 requires 300)
+        // Let's use a simpler linear scale for demo: Level = (XP / 200) + 1
+        return (currentXp / 200) + 1
+    }
+    
+    fun getXpProgress(): Float {
+        val xpForCurrentLevel = (_level.value - 1) * 200
+        val xpForNextLevel = _level.value * 200
+        val currentLevelXp = _xp.value - xpForCurrentLevel
+        val requiredXp = xpForNextLevel - xpForCurrentLevel
+        return currentLevelXp.toFloat() / requiredXp.toFloat()
+    }
+
+    private fun calculateRankTitle(lvl: Int): String {
+        return when {
+            lvl < 2 -> "Beginner"
+            lvl < 4 -> "Hunter"
+            lvl < 8 -> "Elite"
+            lvl < 15 -> "Shadow Monarch"
+            lvl < 25 -> "Architect"
+            else -> "Titan"
         }
     }
 }

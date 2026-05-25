@@ -2,21 +2,15 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val BrandPrimaryLight = Color(0xFF2563EB)
-val BrandHoverLight = Color(0xFF1D4ED8)
-val SurfaceBaseLight = Color(0xFFF8FAFC)
-val SurfaceElevatedLight = Color(0xFFFFFFFF)
-val TextPrimaryLight = Color(0xFF0F172A)
-val TextSecondaryLight = Color(0xFF64748B)
+val CyberCyan = Color(0xFF00E5FF)
+val CyberPink = Color(0xFFFF007F)
+val CyberDark = Color(0xFF06070B)
+val CyberSurface = Color(0xFF10121A)
+val CyberSurfaceVariant = Color(0xFF191C27)
 
-val BrandPrimaryDark = Color(0xFF3B82F6)
-val BrandHoverDark = Color(0xFF60A5FA)
-val SurfaceBaseDark = Color(0xFF020617)
-val SurfaceElevatedDark = Color(0xFF1E293B)
-val TextPrimaryDark = Color(0xFFF8FAFC)
-val TextSecondaryDark = Color(0xFFCBD5E1)
+val CyberTextPrimary = Color(0xFFF0F5FF)
+val CyberTextSecondary = Color(0xFF8D95B5)
 
-val DangerColor = Color(0xFFEF4444)
-val DangerBgLight = Color(0x1AEF4444) // 10% opacity
-val DangerBgDark = Color(0x33EF4444) // 20% opacity
-val SuccessColor = Color(0xFF10B981)
+val CyberDanger = Color(0xFFFF1744)
+val CyberDangerBg = Color(0x33FF1744)
+val CyberSuccess = Color(0xFF00FF7F)
